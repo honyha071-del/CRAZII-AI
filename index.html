@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08111f">
+<title>CRAZII XAU/USD</title>
+<script src="https://unpkg.com/lightweight-charts@5.0.8/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+:root{color-scheme:dark;--bg:#07101d;--panel:#101b2b;--panel2:#142238;--line:#263750;--muted:#93a4bb;--text:#eef4ff;--yellow:#facc15;--red:#ef4444;--green:#34d399;--blue:#38bdf8}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;background:#091525;border-bottom:1px solid var(--line);padding:12px 14px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:900;letter-spacing:.08em}.brand span{color:var(--yellow)}.status{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px}.dot{width:8px;height:8px;border-radius:50%;background:#64748b}.dot.live{background:var(--green);box-shadow:0 0 8px #34d399}
+main{max-width:1100px;margin:auto;padding:12px;display:grid;gap:12px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.symbol{font-size:18px;font-weight:800}.price{font-size:27px;font-weight:900;color:var(--green);font-variant-numeric:tabular-nums}
+.small{color:var(--muted);font-size:11px}.controls{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+button,select,input{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+button{cursor:pointer}button.active{border-color:var(--yellow);color:var(--yellow)}button.primary{background:#725b06;border-color:#a8870a;color:#fff}
+#chart{height:360px;width:100%;margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.metric{background:var(--panel2);border-radius:10px;padding:11px}.metric .v{font-size:18px;font-weight:800;margin-top:5px}.metric .k{color:var(--muted);font-size:11px}
+.section-title{font-weight:800;margin-bottom:10px;letter-spacing:.03em}.signal{font-size:24px;font-weight:900;text-align:center;padding:12px;border-radius:10px;background:#17263a;color:var(--yellow)}
+.signal.buy{color:var(--yellow);border:1px solid #806b16}.signal.sell{color:var(--red);border:1px solid #78313a}
+.levels{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.level{background:var(--panel2);padding:9px;border-radius:9px}.level b{display:block;margin-top:4px;font-size:15px}
+.row{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #203047}.row:last-child{border:0}
+footer{color:var(--muted);font-size:11px;text-align:center;padding:8px 0 24px}
+#notice{padding:10px;border-radius:9px;background:#352a12;color:#f9d878;font-size:12px;line-height:1.5}
+@media(min-width:800px){main{grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr)}.chart-panel{grid-row:span 2}#chart{height:520px}.rightcol{display:grid;gap:12px;align-content:start}}
+@media(max-width:420px){main{padding:8px}.panel{padding:10px}#chart{height:300px}.price{font-size:23px}.grid{gap:7px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><span>●</span> CRAZII <small style="color:#9aabc2">XAU/USD</small></div><div class="status"><i id="liveDot" class="dot"></i><span id="connection">NOT CONNECTED</span></div></header>
+<main>
+<section class="panel chart-panel">
+  <div class="topline"><div><div class="symbol">XAU/USD</div><div class="small">GOLD SPOT • DATA VIA YOUR SECURE BACKEND</div></div><div><div id="price" class="price">—</div><div id="priceTime" class="small">Waiting for data</div></div></div>
+  <div class="controls" id="timeframes">
+    <button data-interval="1min">1m</button><button data-interval="5min">5m</button><button data-interval="15min" class="active">15m</button><button data-interval="1h">1H</button><button data-interval="4h">4H</button><button data-interval="1day">1D</button>
+  </div>
+  <div class="controls"><button id="refresh" class="primary">Refresh</button><button id="emaToggle" class="active">EMA</button><button id="volumeToggle" class="active">VOLUME</button></div>
+  <div id="chart"></div>
+  <div class="small">Yellow = bullish candle • Red = bearish candle. Volume color follows candle direction. Spot FX/metal volume may be unavailable or estimated by provider.</div>
+</section>
+<div class="rightcol">
+<section class="panel">
+  <div class="section-title">CRAZII SIGNAL</div><div id="signal" class="signal">WAIT</div>
+  <div class="small" style="text-align:center;margin-top:7px">Basic EMA/RSI confluence preview — not a guaranteed trade signal.</div>
+</section>
+<section class="panel">
+  <div class="section-title">MARKET SUMMARY</div>
+  <div class="row"><span class="small">Trend</span><b id="trend">—</b></div>
+  <div class="row"><span class="small">EMA 20</span><b id="emaFast">—</b></div>
+  <div class="row"><span class="small">EMA 50</span><b id="emaSlow">—</b></div>
+  <div class="row"><span class="small">RSI 14</span><b id="rsi">—</b></div>
+</section>
+<section class="panel">
+  <div class="section-title">CRAZII INDICATOR ENGINE</div>
+  <div class="grid">
+    <div class="metric"><div class="k">KSI</div><div class="v">Pending</div></div>
+    <div class="metric"><div class="k">DML</div><div class="v">Pending</div></div>
+    <div class="metric"><div class="k">KCX</div><div class="v">Pending</div></div>
+    <div class="metric"><div class="k">KCB</div><div class="v">Pending</div></div>
+  </div>
+  <div class="small" style="margin-top:9px">These four modules are reserved for verified CRAZII formulas. No guessed formulas are used.</div>
+</section>
+<section class="panel">
+  <div class="section-title">TRADE LEVELS</div>
+  <div class="levels">
+    <div class="level"><span class="small">ENTRY</span><b>—</b></div>
+    <div class="level"><span class="small">STOP LOSS</span><b>—</b></div>
+    <div class="level"><span class="small">TAKE PROFIT 1</span><b>—</b></div>
+    <div class="level"><span class="small">TAKE PROFIT 2</span><b>—</b></div>
+  </div>
+  <div class="small" style="margin-top:9px">Trade levels remain disabled until the full signal rules are validated.</div>
+</section>
+</div>
+<section class="panel" style="grid-column:1/-1">
+  <div class="section-title">DATA QUALITY MONITOR</div>
+  <div class="row"><span class="small">Feed</span><b id="feed">Twelve Data via secure proxy</b></div>
+  <div class="row"><span class="small">Last candle</span><b id="lastCandle">—</b></div>
+  <div class="row"><span class="small">Candles loaded</span><b id="candleCount">0</b></div>
+  <div class="row"><span class="small">Volume</span><b id="volumeState">Checking provider data</b></div>
+  <div id="notice">Setup required: host this app on the same origin as the protected CRAZII Worker API, configure Cloudflare Access, then open the app. Never put your Twelve Data API Key in this page.</div>
+</section>
+<footer>CRAZII FULL VERSION • Prototype UI • Market data is informational, not financial advice.</footer>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const state = { interval:"15min", candles:[], showEMA:true, showVolume:true, chart:null, candleSeries:null, volumeSeries:null, ema20Series:null, ema50Series:null };
+  const fmt = n => Number.isFinite(n) ? n.toFixed(2) : "—";
+  const chartEl = $("chart");
+  if (!window.LightweightCharts) { $("notice").textContent = "Chart library failed to load. Check internet connection."; return; }
+
+  state.chart = LightweightCharts.createChart(chartEl, {
+    layout:{background:{type:"solid",color:"#101b2b"},textColor:"#aebed2"},
+    grid:{vertLines:{color:"#1c2b40"},horzLines:{color:"#1c2b40"}},
+    rightPriceScale:{borderColor:"#31425a"},
+    timeScale:{borderColor:"#31425a",timeVisible:true,secondsVisible:false},
+    crosshair:{mode:LightweightCharts.CrosshairMode.Normal},
+    width:chartEl.clientWidth,height:chartEl.clientHeight
+  });
+  state.candleSeries = state.chart.addSeries(LightweightCharts.CandlestickSeries,{
+    upColor:"#facc15",downColor:"#ef4444",borderUpColor:"#facc15",borderDownColor:"#ef4444",wickUpColor:"#facc15",wickDownColor:"#ef4444"
+  });
+  state.volumeSeries = state.chart.addSeries(LightweightCharts.HistogramSeries,{
+    priceFormat:{type:"volume"},priceScaleId:"volume"
+  });
+  state.chart.priceScale("volume").applyOptions({scaleMargins:{top:.82,bottom:0},visible:false});
+  state.ema20Series = state.chart.addSeries(LightweightCharts.LineSeries,{color:"#38bdf8",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
+  state.ema50Series = state.chart.addSeries(LightweightCharts.LineSeries,{color:"#c084fc",lineWidth:1,priceLineVisible:false,lastValueVisible:false});
+
+  function ema(values, period) {
+    const k=2/(period+1), out=[]; let prev;
+    values.forEach((v,i)=>{ prev = i===0 ? v : v*k + prev*(1-k); out.push(prev); });
+    return out;
+  }
+  function rsi(values, period=14) {
+    if(values.length<=period) return NaN;
+    let gain=0,loss=0;
+    for(let i=1;i<=period;i++){const d=values[i]-values[i-1];gain+=Math.max(d,0);loss+=Math.max(-d,0);}
+    let ag=gain/period, al=loss/period;
+    for(let i=period+1;i<values.length;i++){const d=values[i]-values[i-1];ag=(ag*(period-1)+Math.max(d,0))/period;al=(al*(period-1)+Math.max(-d,0))/period;}
+    return al===0?100:100-(100/(1+ag/al));
+  }
+  function timeToUnix(v) {
+    const d = new Date(v.replace(" ","T")+"Z");
+    return Math.floor(d.getTime()/1000);
+  }
+  async function load() {
+    $("connection").textContent="CONNECTING";
+    $("liveDot").classList.remove("live");
+    $("notice").textContent="Connecting to secure CRAZII backend…";
+    try {
+      const [cRes,pRes] = await Promise.all([
+        fetch(`/api/candles?interval=${encodeURIComponent(state.interval)}&outputsize=250`,{credentials:"include"}),
+        fetch("/api/price",{credentials:"include"})
+      ]);
+      if(!cRes.ok) throw new Error(`Candles endpoint: HTTP ${cRes.status}`);
+      const raw=await cRes.json();
+      if(raw.status==="error" || !Array.isArray(raw.values)) throw new Error(raw.message||"No candle values returned");
+      const data=raw.values.slice().reverse().map(x=>({
+        time:timeToUnix(x.datetime),open:+x.open,high:+x.high,low:+x.low,close:+x.close,
+        volume:Number.isFinite(+x.volume)?+x.volume:0
+      })).filter(x=>Number.isFinite(x.time)&&[x.open,x.high,x.low,x.close].every(Number.isFinite));
+      if(!data.length) throw new Error("No valid candles");
+      state.candles=data;
+      state.candleSeries.setData(data);
+      const closes=data.map(x=>x.close), e20=ema(closes,20), e50=ema(closes,50);
+      state.ema20Series.setData(data.map((x,i)=>({time:x.time,value:e20[i]})));
+      state.ema50Series.setData(data.map((x,i)=>({time:x.time,value:e50[i]})));
+      state.ema20Series.applyOptions({visible:state.showEMA});state.ema50Series.applyOptions({visible:state.showEMA});
+      state.volumeSeries.setData(data.map(x=>({time:x.time,value:x.volume,color:x.close>=x.open?"#facc15":"#ef4444"})));
+      state.volumeSeries.applyOptions({visible:state.showVolume});
+      state.chart.timeScale().fitContent();
+      const last=data[data.length-1], trend=e20[e20.length-1]>e50[e50.length-1]?"BULLISH":"BEARISH", rv=rsi(closes);
+      $("price").textContent=fmt(last.close);
+      $("priceTime").textContent="Candle: "+new Date(last.time*1000).toLocaleString();
+      $("trend").textContent=trend;$("emaFast").textContent=fmt(e20[e20.length-1]);$("emaSlow").textContent=fmt(e50[e50.length-1]);$("rsi").textContent=fmt(rv);
+      const sig=trend==="BULLISH"&&rv>=50&&rv<70?"BUY":trend==="BEARISH"&&rv<50&&rv>30?"SELL":"WAIT";
+      $("signal").textContent=sig;$("signal").className="signal "+(sig==="BUY"?"buy":sig==="SELL"?"sell":"");
+      $("lastCandle").textContent=new Date(last.time*1000).toLocaleString();$("candleCount").textContent=String(data.length);
+      const hasVolume=data.some(x=>x.volume>0);$("volumeState").textContent=hasVolume?"Provider volume values returned":"N/A or zero — provider has no usable volume";
+      $("connection").textContent="DATA CONNECTED";$("liveDot").classList.add("live");
+      $("notice").textContent="Connected to CRAZII backend. Price/candles are refreshed on demand. Live WebSocket streaming is a separate next integration step.";
+    } catch(err) {
+      $("connection").textContent="OFFLINE";$("liveDot").classList.remove("live");
+      $("notice").textContent="Connection error: "+err.message+". Confirm that this page is hosted with the Worker API on the same origin and Cloudflare Access is configured.";
+    }
+  }
+  document.querySelectorAll("#timeframes button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("#timeframes button").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active");state.interval=b.dataset.interval;load();
+  }));
+  $("refresh").addEventListener("click",load);
+  $("emaToggle").addEventListener("click",()=>{state.showEMA=!state.showEMA;$("emaToggle").classList.toggle("active",state.showEMA);state.ema20Series.applyOptions({visible:state.showEMA});state.ema50Series.applyOptions({visible:state.showEMA});});
+  $("volumeToggle").addEventListener("click",()=>{state.showVolume=!state.showVolume;$("volumeToggle").classList.toggle("active",state.showVolume);state.volumeSeries.applyOptions({visible:state.showVolume});});
+  if ("ResizeObserver" in window) new ResizeObserver(()=>state.chart.applyOptions({width:chartEl.clientWidth,height:chartEl.clientHeight})).observe(chartEl);
+  load();
+})();
+</script>
+</body>
+</html>
